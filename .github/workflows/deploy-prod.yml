@@ -1,0 +1,59 @@
+# ============================================================================
+# Deploy a PRODUCCION en Cloud Run via Cloud Build.
+# Trigger: push o merge a la rama `main`.
+# Tiene gate de aprobacion manual (environment 'prod' en la repo).
+# ============================================================================
+name: deploy-prod
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build + deploy a Cloud Run (prod)
+    runs-on: ubuntu-latest
+    environment: prod          # requiere aprobacion en Settings -> Environments
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Submit Cloud Build (cloudbuild-prod.yaml)
+        run: |
+          gcloud builds submit . \
+            --config=cloudbuild-prod.yaml \
+            --project=${{ secrets.GCP_PROJECT }}
+
+      - name: Resolve service URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe login-service \
+            --region=southamerica-west1 \
+            --project=${{ secrets.GCP_PROJECT }} \
+            --format='value(status.url)')
+          echo "service_url=$URL" >> $GITHUB_OUTPUT
+          echo "::notice title=Deployed::login-service → $URL"
+
+      - name: Smoke test (/health)
+        run: |
+          set -e
+          STATUS=$(curl -s -o /tmp/h.json -w "%{http_code}" "${{ steps.url.outputs.service_url }}/api-login/health")
+          echo "HTTP $STATUS"
+          cat /tmp/h.json
+          [ "$STATUS" = "200" ]
