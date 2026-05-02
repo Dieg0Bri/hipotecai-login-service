@@ -38,7 +38,8 @@ jobs:
         run: |
           gcloud builds submit . \
             --config=cloudbuild-prod.yaml \
-            --project=${{ secrets.GCP_PROJECT }}
+            --project=${{ secrets.GCP_PROJECT }} \
+            --substitutions=_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
 
       - name: Resolve service URL
         id: url
