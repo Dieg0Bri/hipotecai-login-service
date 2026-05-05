@@ -35,6 +35,8 @@ class DatabaseService {
   }
 
   async upsertUserProfile(profile) {
+    // id_tenant queda con DEFAULT 1 (tenant 'default') si la fila es nueva.
+    // Auto-tenanting por dominio de email se sumará cuando exista un segundo tenant.
     const sql = `
       INSERT INTO dt_usuarios (email, nombre, sub_oauth, picture, updated_at)
       VALUES ($1, $2, $3, $4, NOW())
@@ -43,7 +45,7 @@ class DatabaseService {
         sub_oauth = COALESCE(EXCLUDED.sub_oauth, dt_usuarios.sub_oauth),
         picture = COALESCE(EXCLUDED.picture, dt_usuarios.picture),
         updated_at = NOW()
-      RETURNING email, nombre, picture, sub_oauth
+      RETURNING email, nombre, picture, sub_oauth, id_tenant
     `;
     try {
       const { rows } = await pool.query(sql, [profile.email, profile.name, profile.sub, profile.picture]);
