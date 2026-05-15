@@ -51,4 +51,4 @@ substitutions:
   _GOOGLE_CLIENT_SECRET_SECRET: 'google-client-secret'
   _JWT_SECRET: 'jwt-secret'
   _FRONTEND_URL: 'http://localhost:3030'
-  _ALLOWED_ORIGINS: 'http://localhost:3030'
+  _ALLOWED_ORIGINS: 'http://localhost:3030,http://localhost:3000'
